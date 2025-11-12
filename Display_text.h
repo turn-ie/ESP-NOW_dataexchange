@@ -6,8 +6,9 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
 
-// テキスト表示用のMatrix（Display_imageとは別の名前で衝突回避）
-extern Adafruit_NeoMatrix TextMatrix;
+// テキスト表示は画像表示と同じ物理Matrixを共有する
+// Display_image.cpp で生成された Matrix の参照を流用する
+extern Adafruit_NeoMatrix& TextMatrix;
 
 // テキスト表示用の明るさ
 extern uint8_t gTextBrightness;

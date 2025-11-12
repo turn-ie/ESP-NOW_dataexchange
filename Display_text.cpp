@@ -1,15 +1,14 @@
+// テキスト表示は画像表示と同じMatrixを使うため、
+// ここでは新規生成せず Display_image 側の Matrix を参照として利用する。
+// (以前: 同一PIN 14 に別 NeoMatrix を生成 → 信号競合で不点灯の恐れ)
 #include "Display_text.h"
+#include "Motion.h" // Matrix 参照を得る
 
 // テキスト用の明るさ
 uint8_t gTextBrightness = 20;
 
-// テキスト表示用Matrix（Display_imageとは別インスタンス）
-#define RGB_Control_PIN 14
-Adafruit_NeoMatrix TextMatrix = Adafruit_NeoMatrix(
-  8, 8, RGB_Control_PIN,
-  NEO_MATRIX_TOP + NEO_MATRIX_LEFT + NEO_MATRIX_ROWS + NEO_MATRIX_PROGRESSIVE,
-  NEO_GRB + NEO_KHZ800
-);
+// 画像用 Matrix をそのまま別名で使う
+Adafruit_NeoMatrix& TextMatrix = Matrix;
 
 // カラーパレット
 const uint16_t colors[] = {
@@ -26,7 +25,7 @@ void Matrix_SetTextBrightness(uint8_t b) {
 }
 
 void Matrix_Init() {
-  TextMatrix.begin();
+  // Matrix 初期化は Display_Init() 側で済んでいる想定
   TextMatrix.setTextWrap(false);
   TextMatrix.setBrightness(gTextBrightness);
   TextMatrix.setTextColor(colors[0]);
