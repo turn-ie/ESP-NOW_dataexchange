@@ -76,10 +76,11 @@ void loadDisplayDataFromJson() {
     if (displayFlag == "text") {
         displayText = obj["text"] | "";
         rgbData.clear();
-    } else if (displayFlag == "image") {
+    } else if (displayFlag == "image" || displayFlag == "emoji") {
         displayText.clear();
         rgbData.clear();
         JsonArray arr = obj["rgb"];
+        Serial.println(arr.size());
         for (auto v : arr) rgbData.push_back((uint8_t)v.as<int>());
     } else {
         displayText.clear();
@@ -101,7 +102,7 @@ bool loadDisplayDataFromJsonString(const String& jsonString) {
         displayText = obj["text"] | "";
         rgbData.clear();
         return true;
-    } else if (displayFlag == "image") {
+    } else if (displayFlag == "image" || displayFlag == "emoji") {
         displayText.clear();
         rgbData.clear();
         JsonArray arr = obj["rgb"];
@@ -143,8 +144,12 @@ bool performDisplay() {
         return true;
     }
     
-    if (flag == "image" || flag == "photo") {
+    if (flag == "image" || flag == "photo" || flag == "emoji") {
         if (rgbData.empty()) return false;
+        // 任意のサイズに対応するが、データはRGB(3要素)の倍数であるべき
+        if ((rgbData.size() % 3) != 0) {
+            Serial.printf("[DISPLAY] rgbData size (%u) is not multiple of 3\n", (unsigned)rgbData.size());
+        }
         return DisplayManager::ShowRGBRotCCW(rgbData.data(), rgbData.size(), 3000);
     }
     

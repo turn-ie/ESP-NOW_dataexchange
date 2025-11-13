@@ -12,7 +12,7 @@
 #include "Motion.h"           // Radar/Ripple 用
 #include "Display_Manager.h"  // LED表示統合モジュール
 #include "Json_Handler.h"     // JSON読み込み・保存管理
-#include "Comm_EspNow.h"      // 通信シーケンス外部化
+#include "Comm_EspNow.h"      // 通信シーケンス
 
 /***** ========== LED MATRIX ========== *****/
 #define GLOBAL_BRIGHTNESS 10
