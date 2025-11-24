@@ -137,4 +137,4 @@ unsigned long TextEstimateDurationMs(const char* text, uint16_t frame_delay_ms) 
   return (unsigned long)steps * (unsigned long)frame_delay_ms;
 }
 
-} // namespace DisplayManager
+} 

@@ -23,13 +23,10 @@ uint16_t TEXT_FRAME_DELAY_MS = 60;  // スクロール速度(1ステップの遅
 uint8_t TEXT_BRIGHTNESS = 20;       // テキスト時の明るさ
 
 /***** ========== ボタン ========== *****/
-// ダブルクリックで「受信データ表示モード」をトグル
-// 必要に応じて環境に合わせて変更してください
 #ifndef BUTTON_PIN
 #define BUTTON_PIN 39
 #endif
 
-// OneButtonでクリック/1
 
 static OneButton g_btn;            
 static bool DisplayMode = false;   
@@ -94,7 +91,6 @@ void setup() {
       Serial.println("[PARSE] JSON解析失敗");
       return;
     }
-    // 表示
     if (!performDisplay()) {
       Serial.println("[DISPLAY] 表示できるデータがありません");
     }
@@ -118,7 +114,6 @@ void setup() {
     Serial.println("🔍 起動時に表示中のため、レーダーは有効期限後に開始");
   }
 
-  // BLE: JSON 受信機能の初期化
   BLE_Init();
 }
 
