@@ -28,21 +28,34 @@ static const uint16_t colors[] = {
 };
 
 // ---- 内部ユーティリティ（画像表示用） ----
-static void drawRGBArrayRotCCW(const uint8_t* rgb, size_t n) {
-  if (!rgb) return;
-  if (n < (size_t)(DISP_W * DISP_H * 3)) return;
+// static void drawRGBArrayRotCCW(const uint8_t* rgb, size_t n) {
+//   if (!rgb) return;
+//   if (n < (size_t)(DISP_W * DISP_H * 3)) return;
 
-  s_matrix.fillScreen(0);
-  for (int sy = 0; sy < DISP_H; ++sy) {
-    for (int sx = 0; sx < DISP_W; ++sx) {
-      size_t i = (size_t)(sy * DISP_W + sx) * 3;
-      int dx = sy;
-      int dy = DISP_W - 1 - sx; // 90°CCW
-      s_matrix.drawPixel(dx, dy, s_matrix.Color(rgb[i], rgb[i+1], rgb[i+2]));
-    }
-  }
-  s_matrix.show();
-}
+//   s_matrix.fillScreen(0);
+//   for (int sy = 0; sy < DISP_H; ++sy) {
+//     for (int sx = 0; sx < DISP_W; ++sx) {
+//       // ZIGZAG 反転は不要（プログレッシブ配線なので削除）
+//       size_t i = (size_t)(sy * DISP_W + sx) * 3;
+
+//       // 90度反時計回りに回転
+//       // int dx = sy;
+//       // int dy = DISP_W - 1 - sx;
+
+//       // 🔸 180度回転（上下左右を反転）
+//       // int dx = DISP_W - 1 - sx;
+//       // int dy = DISP_H - 1 - sy;
+
+//       // 純向き
+//       int dx = sx;
+//       int dy = sy;
+
+//       s_matrix.drawPixel(dx, dy, s_matrix.Color(rgb[i + 1], rgb[i], rgb[i + 2]));
+//     }
+//   }
+
+//   s_matrix.show();
+// }
 
 // ---- 内部ユーティリティ（テキスト表示用） ----
 static int getStringWidth(const char* text) {
@@ -82,9 +95,20 @@ bool ShowRGB(const uint8_t* rgb, size_t n, unsigned long display_ms) {
   for (int sy = 0; sy < DISP_H; ++sy) {
     for (int sx = 0; sx < DISP_W; ++sx) {
       size_t i = (size_t)(sy * DISP_W + sx) * 3;
-      int dx = sy;
-      int dy = DISP_W - 1 - sx; // 90°CCW
-      s_matrix.drawPixel(dx, dy, s_matrix.Color(rgb[i], rgb[i+1], rgb[i+2]));
+      
+      // 90度反時計回りに回転
+      // int dx = sy;
+      // int dy = DISP_W - 1 - sx;
+
+      // 🔸 180度回転（上下左右を反転）
+      // int dx = DISP_W - 1 - sx;
+      // int dy = DISP_H - 1 - sy;
+
+      // 純向き
+      int dx = sx;
+      int dy = sy;
+
+      s_matrix.drawPixel(dx, dy, s_matrix.Color(rgb[i + 1], rgb[i], rgb[i + 2]));
     }
   }
   s_matrix.show();
