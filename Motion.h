@@ -16,7 +16,8 @@ extern uint8_t gMotionHue;           // レーダー/リップル共有色相
 
 
 // モーション関連の関数
-void Ripple_PlayOnce(uint16_t duration_ms = 0);
+void Ripple_PlayOnce();
+void DiagonalWave_PlayOnce();
 
 // レーダー待機(非ブロッキング)
 void Radar_InitIdle();

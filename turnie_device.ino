@@ -67,8 +67,9 @@ void setup() {
   g_btn.setClickMs(300);                        // 
   g_btn.attachDoubleClick([]() {
     DisplayMode = !DisplayMode;
-    DisplayManager::AllOn(GLOBAL_BRIGHTNESS);
-    DisplayManager::BlockFor(500); 
+
+    DiagonalWave_PlayOnce();
+    
     Serial.printf("[MODE] 受信データ表示モード: %s\n", DisplayMode ? "ON" : "OFF");
 
     if (DisplayMode) {
@@ -87,6 +88,7 @@ void setup() {
     } else {
       // 表示モード終了 (End)
       DisplayManager::Clear();
+      Radar_InitIdle();
     }
   });
 
@@ -138,7 +140,7 @@ void loop() {
 
   g_btn.tick();
 
-  if (!DisplayManager::IsActive()) {
+  if (!DisplayManager::IsActive() && !DisplayMode) {
     Radar_IdleStep(true);
   }
   delay(16);

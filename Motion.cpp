@@ -41,8 +41,7 @@ static uint16_t ColorHSV8(uint8_t h,uint8_t s,uint8_t v){
 
 
 
-void Ripple_PlayOnce(uint16_t duration_ms){
-  (void)duration_ms; // 未使用パラメータ
+void Ripple_PlayOnce(){
   
   const uint8_t LEVELS=12; 
   const float SPEED=0.14f; 
@@ -86,12 +85,97 @@ void Ripple_PlayOnce(uint16_t duration_ms){
     delay(20); 
     t+=SPEED; 
   }
-  
+
   // 色相を進めず固定
   for(int b=gMotionBrightness; b>=0; b-=2){ 
     Matrix.setBrightness(b); 
     Matrix.show(); 
     delay(18);
+  } 
+  Matrix.fillScreen(0); 
+  Matrix.show();
+  Matrix.setBrightness(originalBrightness);
+}
+
+void DiagonalWave_PlayOnce(){
+  
+  // ==== パラメータ設定 ====
+  const uint8_t LEVELS = 16;     // 階調数
+  const float WAVE_WIDTH = 2.0f; // 2本重なるので、少しだけ細くして解像感を出す
+  const float MOVE_STEP = 0.4f;  // 速度
+  
+  // 投影座標の範囲設定 (0〜14くらい)
+  const float START_POS = -5.0f;
+  const float END_POS = (Matrix.width() + Matrix.height()) + 5.0f; 
+  const float TOTAL_DIST = END_POS - START_POS;
+  
+  // 明るさ設定
+  uint8_t originalBrightness = Matrix.getBrightness();
+  Matrix.setBrightness(gMotionBrightness);
+  uint8_t localHue = gMotionHue;
+
+  float t = 0.f;
+
+  // ==== アニメーションループ ====
+  while(t <= TOTAL_DIST){
+    float center = START_POS + t;
+
+    for(int y=0; y<Matrix.height(); ++y){ 
+      for(int x=0; x<Matrix.width(); ++x){ 
+        
+        // --- 変種のキモ: 2方向の斜め計算 ---
+        
+        // 1. 左上→右下 ( \ ) の距離
+        float proj1 = (float)x + (float)y; 
+        float dist1 = proj1 - center;
+        float amp1 = expf(-(dist1*dist1) / (2.f * WAVE_WIDTH * WAVE_WIDTH));
+
+        // 2. 右上→左下 ( / ) の距離
+        // xを反転させることで逆向きの斜めを作る
+        float proj2 = (float)(Matrix.width() - 1 - x) + (float)y;
+        float dist2 = proj2 - center; // 同じ進行度で動かす
+        float amp2 = expf(-(dist2*dist2) / (2.f * WAVE_WIDTH * WAVE_WIDTH));
+
+        // ★ 2つの波を合成（足し合わせる）
+        // 交差する点は amp が高くなり、より明るく発光する
+        float amp = amp1 + amp2;
+        if(amp > 1.f) amp = 1.f; 
+        
+        // --- 以下、共通の高画質化処理 ---
+
+        // 1. 多階調化
+        float stepped = floorf(amp * LEVELS) / LEVELS;
+
+        // 2. 彩度計算
+        // 交差点（ampが高い）は強烈に白く光る
+        float satf = 1.0f - (0.5f * amp); 
+        if(satf < 0.f) satf = 0.f;
+
+        // 3. 色相シフト
+        // 明るい部分だけ少し色を回す
+        uint8_t pixelHue = localHue + (uint8_t)(amp * 20.0f);
+
+        // 4. 明度計算
+        uint8_t V = gamma8(stepped); 
+        V = (uint8_t)((V * 255) / 255); 
+        
+        uint8_t S = (uint8_t)(satf * 255.f + 0.5f);
+        
+        uint16_t c = ColorHSV8(pixelHue, S, V); 
+        Matrix.drawPixel(x, y, c);
+      } 
+    }
+    Matrix.show(); 
+    delay(20); 
+    
+    t += MOVE_STEP; 
+  }
+  
+  // フェードアウト
+  for(int b=gMotionBrightness; b>=0; b-=2){ 
+    Matrix.setBrightness(b); 
+    Matrix.show(); 
+    delay(10);
   } 
   Matrix.fillScreen(0); 
   Matrix.show();
