@@ -36,11 +36,16 @@ static int getStringWidth(const char* text) {
 
 // ========== 公開API：初期化 ==========
 void Init(uint8_t global_brightness) {
+  Serial.println("DEBUG: DisplayManager::Init() - Start");
   s_matrix.begin();
+  Serial.println("DEBUG: DisplayManager::Init() - s_matrix.begin() done");
+  
   s_matrix.setBrightness(global_brightness);
   s_matrix.fillScreen(0);
   s_matrix.show();
   s_until_ms = 0;
+  
+  Serial.println("DEBUG: DisplayManager::Init() - End");
 }
 
 // ========== 公開API：画像表示 ==========

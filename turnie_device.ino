@@ -14,7 +14,7 @@
 #include "Json_Handler.h"
 #include "BLE_Manager.h"
 #include "Comm_EspNow.h"
-#include "OTA_Handler.h"
+// #include "OTA_Handler.h" // OTA無効化
 
 /***** LED MATRIX 設定 *****/
 int GLOBAL_BRIGHTNESS = 20;
@@ -38,7 +38,7 @@ const unsigned long RECEIVE_DISPLAY_GUARD_MS = 4500;
 /***** 無線設定 *****/
 static const int WIFI_CH = 6;
 static const char* JSON_PATH = "/data.json";
-static int RSSI_THRESHOLD_DBM = -20;
+static int RSSI_THRESHOLD_DBM = -30;
 
 /***** ランタイム状態 *****/
 String myJson;
@@ -74,7 +74,7 @@ void setup() {
   delay(200);
   Serial.println("\n=== ESP-NOW JSON Broadcast ===");
 
-  setupOTA();
+  // setupOTA(); // OTA無効化
 
   DisplayManager::Init(GLOBAL_BRIGHTNESS);
   DisplayManager::TextInit();
@@ -139,6 +139,14 @@ void setup() {
 
   // ESP-NOW初期化
   Comm_SetOnMessage(OnMessageReceived);
+
+  // WiFiチャンネルを強制的に固定
+  WiFi.mode(WIFI_STA);
+  esp_wifi_set_channel(WIFI_CH, WIFI_SECOND_CHAN_NONE);
+  Serial.printf("強制的に CH %d を使用\n", WIFI_CH);
+  Comm_Init(WIFI_CH);
+
+  /* 以前の自動判定ロジックを無効化
   int currentChannel = WiFi.channel();
   if (currentChannel > 0) {
     Serial.printf("WiFi CH %d を使用\n", currentChannel);
@@ -147,6 +155,7 @@ void setup() {
     Serial.printf("デフォルト CH %d を使用\n", WIFI_CH);
     Comm_Init(WIFI_CH);
   }
+  */
   Comm_SetMinRssiToAccept(RSSI_THRESHOLD_DBM);
 
   BLE_Init();
@@ -154,10 +163,33 @@ void setup() {
 
 /***** loop *****/
 void loop() {
-  handleOTA();
+  // handleOTA(); // OTA無効化
 
   static unsigned long nextSend = 0;
   unsigned long now = millis();
+
+  // ★追加: 受信体制の定期チェックとログ出力 (5秒ごと)
+  static unsigned long lastStatusCheck = 0;
+  if (now - lastStatusCheck > 5000) {
+    lastStatusCheck = now;
+    
+    uint8_t pCh;
+    wifi_second_chan_t sCh;
+    esp_wifi_get_channel(&pCh, &sCh);
+    
+    Serial.println("--- [RX STATUS CHECK] ---");
+    Serial.printf("Time: %lu ms\n", now);
+    Serial.printf("WiFi Channel: %d (Target: %d)\n", pCh, WIFI_CH);
+    Serial.printf("RSSI Threshold: %d dBm\n", RSSI_THRESHOLD_DBM);
+    Serial.println("State: Listening for ESP-NOW packets...");
+    
+    // チャンネルずれの自動修正
+    if (pCh != WIFI_CH) {
+        Serial.println("[WARN] Channel drifted! Resetting...");
+        esp_wifi_set_channel(WIFI_CH, WIFI_SECOND_CHAN_NONE);
+    }
+    Serial.println("-------------------------");
+  }
 
   // 表示期限切れ時に自分のデータを再表示
   if (DisplayManager::EndIfExpired()) {
@@ -179,7 +211,9 @@ void loop() {
   // 定期ブロードキャスト
   if (!myJson.isEmpty() && now >= nextSend) {
     Comm_SendJsonBroadcast(myJson);
-    nextSend = now + 100 + (esp_random() % 50) - 25;
+    // 送信間隔をランダム化 (2000ms 〜 3000ms)
+    // これにより、デバイス間の送信タイミングの同期（衝突）を防ぐ
+    nextSend = now + 2000 + (esp_random() % 1000); 
   }
 
   // シリアル経由でJSON保存

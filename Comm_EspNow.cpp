@@ -45,8 +45,16 @@ static void handleRecv(const uint8_t* mac_addr, const uint8_t* data, int len) {
   if (!data || len <= 0) return;
   if (mac_addr && memcmp(mac_addr, s_selfMac, 6) == 0) return; // 自送信は無視
 
+  // ★変更: 受信データの中身を少し表示する
+  Serial.printf("[%lu] [RX] Recv packet len=%d | ", millis(), len);
+  for(int i=0; i<min(len, 20); i++) { // 先頭20バイトを表示
+      Serial.printf("%02X ", data[i]);
+  }
+  Serial.println("..."); // 改行
+
   // 1) 単発JSON（先頭'{'）
   if (data[0] == '{') {
+    Serial.printf("RX: Single JSON (%d bytes)\n", len); // 受信デバッグ
     if (s_onMessage) s_onMessage(data, (size_t)len);
     return;
   }
@@ -62,6 +70,7 @@ static void handleRecv(const uint8_t* mac_addr, const uint8_t* data, int len) {
                || (millis() - s_rx.startAt > RX_TIMEOUT_MS);
 
   if (needInit) {
+    Serial.printf("RX: Start Chunked Msg ID=%d Total=%d\n", h->msgId, h->total); // 受信デバッグ
     s_rx = RxState{}; // reset struct
     s_rx.active = true;
     s_rx.msgId = h->msgId;
@@ -82,6 +91,7 @@ static void handleRecv(const uint8_t* mac_addr, const uint8_t* data, int len) {
   }
 
   if (s_rx.gotCount == s_rx.total && s_rx.lastLen > 0) {
+    Serial.println("RX: All Chunks Received"); // 受信デバッグ
     size_t fullLen = (size_t)(s_rx.total - 1) * CHUNK_MAX + s_rx.lastLen;
     if (s_onMessage) s_onMessage(s_rx.buf, fullLen);
     s_rx.active = false;
@@ -125,9 +135,11 @@ void Comm_Init(int wifiChannel) {
   esp_wifi_get_mac(WIFI_IF_STA, s_selfMac);
 
   if (esp_now_init() != ESP_OK) {
-    
+    Serial.println("ESP-NOW Init Failed"); // 初期化失敗ログ
     return;
   }
+  Serial.printf("ESP-NOW Init Success. MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", 
+                s_selfMac[0], s_selfMac[1], s_selfMac[2], s_selfMac[3], s_selfMac[4], s_selfMac[5]); // 初期化成功ログ
 
   esp_now_register_send_cb(onSent);
   esp_now_register_recv_cb(onRecv);
@@ -154,8 +166,17 @@ void Comm_SendJsonBroadcast(const String& json) {
   const size_t L = json.length();
   if (L == 0) return;
 
+  // デバッグ: 送信チャンネルとデータ長を表示
+  uint8_t primaryChan;
+  wifi_second_chan_t secondChan;
+  esp_wifi_get_channel(&primaryChan, &secondChan);
+  
+  // ★変更: タイムスタンプ付きで送信開始ログ
+  Serial.printf("[%lu] [TX] Start Broadcast %u bytes on CH %u\n", millis(), (unsigned)L, primaryChan);
+
   if (L <= 250) {// 単発送信
     esp_now_send(MAC_BC, (const uint8_t*)json.c_str(), L);
+    Serial.printf("[%lu] [TX] End Broadcast (Single)\n", millis());
     return;
   }
   // 分割送信
@@ -167,7 +188,7 @@ void Comm_SendJsonBroadcast(const String& json) {
 
   uint8_t packet[sizeof(ChunkHdr) + CHUNK_MAX];
   for (uint16_t i = 0; i < total; i++) {
-    Serial.printf("Sending chunk %u/%u\n", i + 1, total);
+    // Serial.printf("Sending chunk %u/%u\n", i + 1, total); // ログ抑制
     size_t off = (size_t)i * CHUNK_MAX;
     uint16_t n = (uint16_t)min((size_t)CHUNK_MAX, L - off);
 
@@ -182,5 +203,7 @@ void Comm_SendJsonBroadcast(const String& json) {
     esp_now_send(MAC_BC, packet, sizeof(ChunkHdr) + n);
     delay(3);
   }
+  // ★追加: 送信完了ログ
+  Serial.printf("[%lu] [TX] End Broadcast (Chunked)\n", millis());
 }
 
