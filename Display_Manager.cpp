@@ -65,16 +65,17 @@ bool ShowRGB(const uint8_t* rgb, size_t n, unsigned long display_ms) {
   if (!rgb) return false;
   if (n < (size_t)(DISP_W * DISP_H * 3)) return false;
 
+  // ★変更: 手動計算をやめてライブラリの回転機能を使う
+  s_matrix.setRotation(3); // 反時計回り90度回転
+
   s_matrix.fillScreen(0);
   for (int sy = 0; sy < DISP_H; ++sy) {
     for (int sx = 0; sx < DISP_W; ++sx) {
       size_t i = (size_t)(sy * DISP_W + sx) * 3;
       
-      // 反時計回り90度回転: (sx, sy) → (sy, DISP_W - 1 - sx)
-      int dx = sy;
-      int dy = DISP_W - 1 - sx;
-
-      s_matrix.drawPixel(dx, dy, s_matrix.Color(rgb[i + 1], rgb[i], rgb[i + 2]));
+      // ★変更: 手動計算を削除し、そのままの座標で描画
+      // ライブラリが setRotation(3) に従って回転してくれる
+      s_matrix.drawPixel(sx, sy, s_matrix.Color(rgb[i + 1], rgb[i], rgb[i + 2]));
     }
   }
   s_matrix.show();
@@ -87,6 +88,9 @@ bool ShowRGB_Animated(const uint8_t* rgb, size_t n, unsigned long display_ms) {
   if (!rgb) return false;
   if (n < (size_t)(DISP_W * DISP_H * 3)) return false;
 
+  // ★変更: 手動計算をやめてライブラリの回転機能を使う
+  s_matrix.setRotation(3); // 反時計回り90度回転
+
   s_matrix.fillScreen(0);
   s_matrix.show(); // まず消す
 
@@ -94,11 +98,8 @@ bool ShowRGB_Animated(const uint8_t* rgb, size_t n, unsigned long display_ms) {
     for (int sx = 0; sx < DISP_W; ++sx) {
       size_t i = (size_t)(sy * DISP_W + sx) * 3;
       
-      // 反時計回り90度回転: (sx, sy) → (sy, DISP_W - 1 - sx)
-      int dx = sy;
-      int dy = DISP_W - 1 - sx;
-
-      s_matrix.drawPixel(dx, dy, s_matrix.Color(rgb[i + 1], rgb[i], rgb[i + 2]));
+      // ★変更: 手動計算を削除し、そのままの座標で描画
+      s_matrix.drawPixel(sx, sy, s_matrix.Color(rgb[i + 1], rgb[i], rgb[i + 2]));
       s_matrix.show();
       delay(10); // 1ピクセルごとのウェイト
     }
