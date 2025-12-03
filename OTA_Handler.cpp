@@ -7,7 +7,7 @@ const char* password = "gEdCx5Rdm9J9WNAJ7xN7";
 
 static bool otaReady = false;
 static unsigned long lastRetryTime = 0;
-const unsigned long RETRY_INTERVAL_MS = 60000; // 1分ごとに再試行
+const unsigned long RETRY_INTERVAL_MS = 30000; // 1分ごとに再試行
 
 // WiFi接続を試みる（最大1秒間）
 static bool tryConnect() {
