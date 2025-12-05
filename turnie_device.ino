@@ -39,7 +39,7 @@ const unsigned long RECEIVE_DISPLAY_GUARD_MS = 4500;
 /***** 無線設定 *****/
 static const int WIFI_CH = 6;
 static const char* JSON_PATH = "/data.json";
-static int RSSI_THRESHOLD_DBM = -50;
+static int RSSI_THRESHOLD_DBM = -45;
 
 /***** ランタイム状態 *****/
 String myJson;
@@ -48,9 +48,6 @@ String myJson;
 static void OnMessageReceived(const uint8_t* data, size_t len) {
   String incoming((const char*)data, len);
 
-  if (incoming.equals(lastRxData) && (millis() - lastRxTime < IGNORE_MS)) {
-    return;
-  }
 
   lastRxData = incoming;
   lastRxTime = millis();
