@@ -2,8 +2,8 @@
 #include <math.h>
 
 // === モーション用の明るさと色相 ===
-uint8_t gMotionBrightness = 20;  // レーダー/リップル
-uint8_t gMotionHue        = 74; // 共通色相 (固定用)
+uint8_t gMotionBrightness = 20;
+uint8_t gMotionHue        = 74;
 // Hue 0-255 早見表 (HSV H→代表色 / 角度近似)
 //turnie1 90 赤ピンク
 //turnie2 212 青
@@ -53,7 +53,7 @@ void Ripple_PlayOnce(){
   
   uint8_t originalBrightness = Matrix.getBrightness();
   Matrix.setBrightness(gMotionBrightness);
-  uint8_t localHue = gMotionHue; // 固定色相
+  uint8_t localHue = gMotionHue;
   const float cx=(Matrix.width()-1)*0.5f; 
   const float cy=(Matrix.height()-1)*0.5f; 
   float t=0.f;
@@ -86,7 +86,6 @@ void Ripple_PlayOnce(){
     t+=SPEED; 
   }
 
-  // 色相を進めず固定
   for(int b=gMotionBrightness; b>=0; b-=2){ 
     Matrix.setBrightness(b); 
     Matrix.show(); 
@@ -99,61 +98,46 @@ void Ripple_PlayOnce(){
 
 void DiagonalWave_PlayOnce(){
   
-  // ==== パラメータ設定 ====
-  const uint8_t LEVELS = 12;      // 階調数 (Rippleと同じ)
-  const float SIGMA = 0.8f;       // 波の幅 (ガウシアンの標準偏差)
-  const float SPEED = 0.18f;      // 速度
+  const uint8_t LEVELS = 12;
+  const float SIGMA = 0.8f;
+  const float SPEED = 0.18f;
   
-  // 中心を基準に左右対称にスタート
-  const float CENTER = (Matrix.width() - 1) * 0.5f;  // 8x8なら3.5
-  const float MARGIN = 2.5f;  // 画面外からのマージン
+  const float CENTER = (Matrix.width() - 1) * 0.5f;
+  const float MARGIN = 2.5f;
   const float START_LEFT = -MARGIN;
   const float START_RIGHT = (Matrix.width() - 1) + MARGIN;
-  const float HALF_DIST = CENTER + MARGIN;  // 中心までの距離
-  const float TOTAL_DIST = HALF_DIST * 2.0f;  // 全移動距離（すれ違って反対側まで）
+  const float HALF_DIST = CENTER + MARGIN;
+  const float TOTAL_DIST = HALF_DIST * 2.0f;
   
-  // 明るさ設定
   uint8_t originalBrightness = Matrix.getBrightness();
   Matrix.setBrightness(gMotionBrightness);
   uint8_t localHue = gMotionHue;
 
   float t = 0.f;
 
-  // ==== アニメーションループ ====
   while(t <= TOTAL_DIST){
-    // 左からの波の現在位置
     float posLeft = START_LEFT + t;
-    // 右からの波の現在位置
     float posRight = START_RIGHT - t;
 
     for(int y=0; y<Matrix.height(); ++y){ 
       for(int x=0; x<Matrix.width(); ++x){ 
         float fx = (float)x;
         
-        // --- 左からの波 ---
         float distL = fx - posLeft;
         float ampL = expf(-(distL*distL) / (2.f * SIGMA * SIGMA));
         
-        // --- 右からの波 ---
         float distR = fx - posRight;
         float ampR = expf(-(distR*distR) / (2.f * SIGMA * SIGMA));
         
-        // ★ 2つの波を合成
-        // すれ違う点でより明るく発光
         float amp = ampL + ampR;
         if(amp > 1.f) amp = 1.f;
         
-        // --- Ripple風グラデーション処理 ---
-        
-        // 1. 多階調化
         float stepped = floorf(amp * LEVELS) / LEVELS;
         
-        // 2. 彩度計算 (Ripple風: 中心ほど彩度を下げて白っぽく)
         float satf = 0.90f - 0.25f * amp;
         if(satf < 0.f) satf = 0.f;
         if(satf > 1.f) satf = 1.f;
         
-        // 3. 明度計算 (Ripple風)
         uint8_t V = gamma8(stepped * 0.9f);
         V = (uint8_t)((V * 250 + 127) / 255);
         
@@ -169,7 +153,6 @@ void DiagonalWave_PlayOnce(){
     t += SPEED; 
   }
   
-  // フェードアウト
   for(int b=gMotionBrightness; b>=0; b-=2){ 
     Matrix.setBrightness(b); 
     Matrix.show(); 
@@ -178,7 +161,7 @@ void DiagonalWave_PlayOnce(){
   Matrix.fillScreen(0); 
   Matrix.show();
   Matrix.setBrightness(originalBrightness);
-  Matrix.show(); // ★追加
+  Matrix.show();
 }
 
 // 非ブロッキング レーダー（色相固定）
@@ -235,6 +218,5 @@ void Radar_IdleStep(bool doShow){
   sRadarAngleDeg+=RADAR_SPEED; 
   if(sRadarAngleDeg>=360.f){ 
     sRadarAngleDeg-=360.f; 
-    /* 色相固定: 変化させない */ 
   }
 }

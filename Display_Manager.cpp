@@ -3,7 +3,6 @@
 
 namespace DisplayManager {
 
-// ★追加: 前方宣言 (Clear関数などで呼び出せるようにする)
 void TextScroll_Stop();
 
 // ---- 内部状態 ----
@@ -25,10 +24,10 @@ static int MatrixWidth = 0;
 
 // テキストカラーパレット
 static const uint16_t colors[] = {
-  s_matrix.Color(255,255,255),  // 白
-  s_matrix.Color(255,0,0),      // 赤
-  s_matrix.Color(0,255,0),      // 緑
-  s_matrix.Color(0,0,255)       // 青
+  s_matrix.Color(255,255,255),
+  s_matrix.Color(255,0,0),
+  s_matrix.Color(0,255,0),
+  s_matrix.Color(0,0,255)
 };
 
 
@@ -40,21 +39,16 @@ static int getStringWidth(const char* text) {
 
 // ========== 公開API：初期化 ==========
 void Init(uint8_t global_brightness) {
-  Serial.println("DEBUG: DisplayManager::Init() - Start");
   s_matrix.begin();
-  Serial.println("DEBUG: DisplayManager::Init() - s_matrix.begin() done");
-  
   s_matrix.setBrightness(global_brightness);
   s_matrix.fillScreen(0);
   s_matrix.show();
   s_until_ms = 0;
-  
-  Serial.println("DEBUG: DisplayManager::Init() - End");
 }
 
 // ========== 公開API：画像表示 ==========
 void Clear() {
-  TextScroll_Stop(); // ★追加: スクロールを停止
+  TextScroll_Stop();
   s_matrix.fillScreen(0);
   s_matrix.show();
   s_until_ms = 0;
@@ -65,32 +59,29 @@ void AllOn(uint8_t r, uint8_t g, uint8_t b) {
   s_matrix.setBrightness(GLOBAL_BRIGHTNESS);
   s_matrix.fillScreen(s_matrix.Color(r, g, b));
   s_matrix.show();
-  s_until_ms = 0;  // ★追加: 無期限表示（期限切れしない）
+  s_until_ms = 0;
 }
 
+
 bool ShowRGB(const uint8_t* rgb, size_t n, unsigned long display_ms) {
-  TextScroll_Stop(); // ★追加: スクロールを停止
+  TextScroll_Stop();
   if (!rgb) return false;
   if (n < (size_t)(DISP_W * DISP_H * 3)) return false;
 
-  // ★変更: 手動計算をやめてライブラリの回転機能を使う
-  s_matrix.setRotation(3); // 反時計回り90度回転
-  s_matrix.setBrightness(GLOBAL_BRIGHTNESS); // ★追加: 明るさを強制設定
+  s_matrix.setRotation(3);
+  s_matrix.setBrightness(GLOBAL_BRIGHTNESS);
 
   s_matrix.fillScreen(0);
   for (int sy = 0; sy < DISP_H; ++sy) {
     for (int sx = 0; sx < DISP_W; ++sx) {
       size_t i = (size_t)(sy * DISP_W + sx) * 3;
-      
-      // ★変更: 手動計算を削除し、そのままの座標で描画
-      // ライブラリが setRotation(3) に従って回転してくれる
       s_matrix.drawPixel(sx, sy, s_matrix.Color(rgb[i + 1], rgb[i], rgb[i + 2]));
     }
   }
   s_matrix.show();
 
   if (display_ms == ULONG_MAX) {
-    s_until_ms = 0; // 無期限
+    s_until_ms = 0;
   } else {
     s_until_ms = millis() + display_ms;
   }
@@ -98,31 +89,28 @@ bool ShowRGB(const uint8_t* rgb, size_t n, unsigned long display_ms) {
 }
 
 bool ShowRGB_Animated(const uint8_t* rgb, size_t n, unsigned long display_ms) {
-  TextScroll_Stop(); // ★追加: スクロールを停止
+  TextScroll_Stop();
   if (!rgb) return false;
   if (n < (size_t)(DISP_W * DISP_H * 3)) return false;
 
-  // ★変更: 手動計算をやめてライブラリの回転機能を使う
-  s_matrix.setRotation(3); // 反時計回り90度回転
-  s_matrix.setBrightness(GLOBAL_BRIGHTNESS); // ★追加: 明るさを強制設定
+  s_matrix.setRotation(3);
+  s_matrix.setBrightness(GLOBAL_BRIGHTNESS);
 
   s_matrix.fillScreen(0);
-  s_matrix.show(); // まず消す
-  delay(50); // ★追加: 安定待ち
+  s_matrix.show();
+  delay(50);
 
   for (int sy = 0; sy < DISP_H; ++sy) {
     for (int sx = 0; sx < DISP_W; ++sx) {
       size_t i = (size_t)(sy * DISP_W + sx) * 3;
-      
-      // ★変更: 手動計算を削除し、そのままの座標で描画
       s_matrix.drawPixel(sx, sy, s_matrix.Color(rgb[i + 1], rgb[i], rgb[i + 2]));
       s_matrix.show();
-      delay(10); // 1ピクセルごとのウェイト
+      delay(10);
     }
   }
   
   if (display_ms == ULONG_MAX) {
-    s_until_ms = 0; // 無期限
+    s_until_ms = 0;
   } else {
     s_until_ms = millis() + display_ms;
   }
@@ -160,7 +148,7 @@ void TextInit() {
 }
 
 void TextPlayOnce(const char* text, uint16_t frame_delay_ms) {
-  TextScroll_Stop(); // ★追加: ノンブロッキングスクロールを停止
+  TextScroll_Stop();
   s_matrix.setBrightness(GLOBAL_BRIGHTNESS);
   int textWidth = getStringWidth(text);
   MatrixWidth = s_matrix.width();
@@ -184,8 +172,8 @@ static bool s_isScrolling = false;
 static bool s_scrollLoop = true;
 
 void TextScroll_Start(const char* text, uint16_t frame_delay_ms, bool loop) {
-  TextScroll_Stop(); // ★追加: 既存のスクロールがあれば停止してリセット
-  s_until_ms = 0;    // ★追加: 期限切れチェックで消されないようにクリア
+  TextScroll_Stop();
+  s_until_ms = 0;
   if (!text) return;
   s_scrollText = String(text);
   s_scrollDelay = frame_delay_ms;
@@ -193,13 +181,12 @@ void TextScroll_Start(const char* text, uint16_t frame_delay_ms, bool loop) {
   s_scrollLoop = loop;
   
   s_matrix.setBrightness(GLOBAL_BRIGHTNESS);
-  s_matrix.setRotation(3); // 反時計回り90度回転
-  s_matrix.setTextWrap(false); // Ensure no wrap
-  s_scrollX = s_matrix.height(); // 回転後はheightがスクロール方向
+  s_matrix.setRotation(3);
+  s_matrix.setTextWrap(false);
+  s_scrollX = s_matrix.height();
   s_isScrolling = true;
   s_lastScrollTime = millis();
-  
-  // Initial draw
+
   s_matrix.fillScreen(0);
   s_matrix.setCursor(s_scrollX, 0);
   s_matrix.print(s_scrollText);
@@ -220,9 +207,9 @@ void TextScroll_Update() {
     s_scrollX--;
     if (s_scrollX < -s_textWidth) {
       if (s_scrollLoop) {
-        s_scrollX = s_matrix.height(); // 回転後はheightがスクロール方向
+        s_scrollX = s_matrix.height();
       } else {
-        s_isScrolling = false; // Stop after one scroll
+        s_isScrolling = false;
         s_matrix.fillScreen(0);
         s_matrix.show();
       }
@@ -232,7 +219,7 @@ void TextScroll_Update() {
 
 void TextScroll_Stop() {
   s_isScrolling = false;
-  s_matrix.setRotation(0); // 回転をリセット
+  s_matrix.setRotation(0);
 }
 
 bool TextScroll_IsActive() {

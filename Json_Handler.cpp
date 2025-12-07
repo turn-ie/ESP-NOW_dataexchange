@@ -153,8 +153,7 @@ bool performDisplay(bool animate, unsigned long display_ms, bool textLoop) {
             DisplayManager::TextScroll_Stop();
         }
         
-        // ★修正: 0の場合は無期限（s_until_msを0にする特別な値として扱う）
-        // ULONG_MAXだとオーバーフローの問題があるので、0を「無期限」として扱う
+        
         
         if (animate) {
             return DisplayManager::ShowRGB_Animated(rgbData.data(), rgbData.size(), display_ms);

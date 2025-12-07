@@ -27,7 +27,7 @@ uint16_t TEXT_FRAME_DELAY_MS = 70;
 #endif
 
 static OneButton g_btn;
-static OneButton g_btnBoot(0, true); // Bootボタン (GPIO 0)
+static OneButton g_btnBoot(0, true);
 static bool DisplayMode = false;
 
 /***** 受信制御 *****/
@@ -44,13 +44,12 @@ static int RSSI_THRESHOLD_DBM = -75;
 
 /***** ランタイム状態 *****/
 String myJson;
-static size_t currentInboxIndex = 0;  // ★追加: 現在表示中のインデックス
+static size_t currentInboxIndex = 0;
 
 /***** 受信コールバック *****/
 static void OnMessageReceived(const uint8_t* data, size_t len) {
   String incoming((const char*)data, len);
 
-    // 直近のデータと同じなら無視（デバウンス）
   if (incoming.equals(lastRxData) && (millis() - lastRxTime < IGNORE_MS)) {
     return;
   }
@@ -86,17 +85,14 @@ void setup() {
   DisplayManager::TextInit();
   Ripple_PlayOnce();
 
-  // ボタン初期化
   g_btn.setup(BUTTON_PIN, INPUT_PULLUP, true);
   g_btn.setClickMs(300);
 
-  // Bootボタン: クリックでデバッグモードへ移行
   g_btnBoot.attachClick([]() {
     debugPrintln("[BOOT] Starting Debug Mode...");
     startDebugMode();
   });
 
-  // ダブルクリック: 表示モード切替
   g_btn.attachDoubleClick([]() {
     DisplayMode = !DisplayMode;
     DiagonalWave_PlayOnce();
@@ -105,22 +101,13 @@ void setup() {
     if (DisplayMode) {
       size_t n = inboxSize();
       if (n > 0) {
-        // currentInboxIndex = (currentInboxIndex + 1) % n;
-        currentInboxIndex = 0; // ★変更: 古い順（最初から）
-        
+        currentInboxIndex = 0;
         InboxItem item;
         if (inboxGet(currentInboxIndex, item)) {
-          debugPrintln("[DEBUG] Inbox item found. Loading JSON...");
           if (loadDisplayFromJsonString(item.json)) {
             debugPrintf("[INBOX] 表示中: %d / %d\n", currentInboxIndex + 1, n);
-            debugPrintln("[DEBUG] Calling performDisplay(true, ULONG_MAX, true)...");
-            bool res = performDisplay(true, ULONG_MAX, true);  // アニメON, 無期限, ループON
-            debugPrintf("[DEBUG] performDisplay result: %s\n", res ? "TRUE" : "FALSE");
-          } else {
-            debugPrintln("[ERROR] loadDisplayFromJsonString failed!");
+            performDisplay(true, ULONG_MAX, true);
           }
-        } else {
-          debugPrintln("[ERROR] inboxGet failed!");
         }
       } else {
         debugPrintln("[INBOX] データなし");
@@ -134,7 +121,6 @@ void setup() {
     }
   });
 
-  // シングルクリック: 次のデータを表示（ループ）
   g_btn.attachClick([]() {
     if (!DisplayMode) return;
 
@@ -144,19 +130,17 @@ void setup() {
       return;
     }
 
-    // 次のインデックスへ（最後まで行ったら最初に戻る）
     currentInboxIndex = (currentInboxIndex + 1) % n;
 
     InboxItem item;
     if (inboxGet(currentInboxIndex, item)) {
       if (loadDisplayFromJsonString(item.json)) {
         debugPrintf("[INBOX] 表示中: %d / %d\n", currentInboxIndex + 1, n);
-        performDisplay(true, ULONG_MAX, true);  // アニメON, 無期限, ループON
+        performDisplay(true, ULONG_MAX, true);
       }
     }
   });
 
-  // 保存されたJSONを読み込んで表示
   myJson = loadJsonFromPath(JSON_PATH, 2048);
   debugPrintf("生データ:\n%s\n", myJson.c_str());
   debugPrintf("%s (%uB)\n", JSON_PATH, (unsigned)myJson.length());
@@ -165,7 +149,6 @@ void setup() {
     performDisplay();
   }
 
-  // ESP-NOW初期化
   Comm_SetOnMessage(OnMessageReceived);
 
   WiFi.mode(WIFI_STA);
@@ -180,20 +163,17 @@ void setup() {
 
 /***** loop *****/
 void loop() {
-  // デバッグモード中はOTA/Telnet処理のみ
   if (isDebugMode()) {
     handleDebugMode();
     return;
   }
 
-  // ========== 通常モードの処理 ==========
   g_btn.tick();
   g_btnBoot.tick();
 
   static unsigned long nextSend = 0;
   unsigned long now = millis();
 
-  // 受信体制の定期チェック (5秒ごと)
   static unsigned long lastStatusCheck = 0;
   if (now - lastStatusCheck > 5000) {
     lastStatusCheck = now;
@@ -215,7 +195,6 @@ void loop() {
     debugPrintln("-------------------------");
   }
 
-  // 表示期限切れ時に自分のデータを再表示
   if (DisplayManager::EndIfExpired()) {
     if (!myJson.isEmpty() && !DisplayMode) {
       loadDisplayFromJsonString(myJson);
@@ -226,12 +205,10 @@ void loop() {
   if (DisplayManager::TextScroll_IsActive()) {
     DisplayManager::TextScroll_Update();
     
-    // ★追加: スクロールが終わった瞬間に自分の表示に戻す
     if (!DisplayManager::TextScroll_IsActive()) {
       if (!DisplayMode && !myJson.isEmpty()) {
         loadDisplayFromJsonString(myJson);
         performDisplay();
-        debugPrintln("[INFO] Text scroll finished, reverting to myJson");
       }
     }
   }
@@ -239,13 +216,11 @@ void loop() {
 
   BLE_Tick();
 
-  // 定期ブロードキャスト
   if (!myJson.isEmpty() && now >= nextSend) {
     Comm_SendJsonBroadcast(myJson);
     nextSend = now + 1000 + (esp_random() % 500);
   }
 
-  // シリアル経由でJSON保存
   if (Serial.available() > 0) {
     String line = Serial.readStringUntil('\n');
     line.trim();
@@ -256,7 +231,6 @@ void loop() {
         myJson = js;
         loadDisplayFromJsonString(myJson);
         performDisplay();
-        debugPrintln("Saved JSON to /data.json and displayed it");
       }
     }
   }
