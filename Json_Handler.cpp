@@ -149,17 +149,17 @@ bool performDisplay(bool animate, unsigned long display_ms, bool textLoop) {
     if (flag == "image" || flag == "photo" || flag == "emoji") {
         if (rgbData.empty()) return false;
         
-        // ▼▼▼ 追加: テキストスクロール中なら停止する ▼▼▼
         if (DisplayManager::TextScroll_IsActive()) {
             DisplayManager::TextScroll_Stop();
         }
-        // ▲▲▲ 追加 ▲▲▲
         
-        unsigned long duration = (display_ms == 0) ? 1 : display_ms;
+        // ★修正: 0の場合は無期限（s_until_msを0にする特別な値として扱う）
+        // ULONG_MAXだとオーバーフローの問題があるので、0を「無期限」として扱う
+        
         if (animate) {
-            return DisplayManager::ShowRGB_Animated(rgbData.data(), rgbData.size(), duration);
+            return DisplayManager::ShowRGB_Animated(rgbData.data(), rgbData.size(), display_ms);
         } else {
-            return DisplayManager::ShowRGB(rgbData.data(), rgbData.size(), duration);
+            return DisplayManager::ShowRGB(rgbData.data(), rgbData.size(), display_ms);
         }
     }
     

@@ -3,12 +3,12 @@
 
 // === モーション用の明るさと色相 ===
 uint8_t gMotionBrightness = 20;  // レーダー/リップル
-uint8_t gMotionHue        = 235; // 共通色相 (固定用)
+uint8_t gMotionHue        = 74; // 共通色相 (固定用)
 // Hue 0-255 早見表 (HSV H→代表色 / 角度近似)
-//100ピンク
-//90赤ピンク
-//210水色
-//235青緑
+//turnie1 90 赤ピンク
+//turnie2 212 青
+//turnie3 4 緑
+//turnie4 74 黄
 
 
 
@@ -178,6 +178,7 @@ void DiagonalWave_PlayOnce(){
   Matrix.fillScreen(0); 
   Matrix.show();
   Matrix.setBrightness(originalBrightness);
+  Matrix.show(); // ★追加
 }
 
 // 非ブロッキング レーダー（色相固定）

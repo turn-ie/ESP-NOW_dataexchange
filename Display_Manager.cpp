@@ -1,4 +1,5 @@
 #include "Display_Manager.h"
+#include <climits>
 
 namespace DisplayManager {
 
@@ -59,25 +60,12 @@ void Clear() {
   s_until_ms = 0;
 }
 
-void AllOnGreen(uint8_t brightness) {
-  TextScroll_Stop(); // ★追加: スクロールを停止
-  s_matrix.setBrightness(brightness);
-  s_matrix.fillScreen(s_matrix.Color(255, 0, 0));
-  s_matrix.show();
-}
-
-void AllOnRed(uint8_t brightness) {
-  TextScroll_Stop(); // ★追加: スクロールを停止
-  s_matrix.setBrightness(brightness);
-  s_matrix.fillScreen(s_matrix.Color(0, 255, 0));
-  s_matrix.show();
-}
-
-void AllOnWhite(uint8_t brightness) {
+void AllOn(uint8_t r, uint8_t g, uint8_t b) {
   TextScroll_Stop();
-  s_matrix.setBrightness(brightness);
-  s_matrix.fillScreen(s_matrix.Color(255, 255, 255));
+  s_matrix.setBrightness(GLOBAL_BRIGHTNESS);
+  s_matrix.fillScreen(s_matrix.Color(r, g, b));
   s_matrix.show();
+  s_until_ms = 0;  // ★追加: 無期限表示（期限切れしない）
 }
 
 bool ShowRGB(const uint8_t* rgb, size_t n, unsigned long display_ms) {
@@ -87,6 +75,7 @@ bool ShowRGB(const uint8_t* rgb, size_t n, unsigned long display_ms) {
 
   // ★変更: 手動計算をやめてライブラリの回転機能を使う
   s_matrix.setRotation(3); // 反時計回り90度回転
+  s_matrix.setBrightness(GLOBAL_BRIGHTNESS); // ★追加: 明るさを強制設定
 
   s_matrix.fillScreen(0);
   for (int sy = 0; sy < DISP_H; ++sy) {
@@ -100,7 +89,11 @@ bool ShowRGB(const uint8_t* rgb, size_t n, unsigned long display_ms) {
   }
   s_matrix.show();
 
-  s_until_ms = millis() + display_ms;
+  if (display_ms == ULONG_MAX) {
+    s_until_ms = 0; // 無期限
+  } else {
+    s_until_ms = millis() + display_ms;
+  }
   return true;
 }
 
@@ -111,9 +104,11 @@ bool ShowRGB_Animated(const uint8_t* rgb, size_t n, unsigned long display_ms) {
 
   // ★変更: 手動計算をやめてライブラリの回転機能を使う
   s_matrix.setRotation(3); // 反時計回り90度回転
+  s_matrix.setBrightness(GLOBAL_BRIGHTNESS); // ★追加: 明るさを強制設定
 
   s_matrix.fillScreen(0);
   s_matrix.show(); // まず消す
+  delay(50); // ★追加: 安定待ち
 
   for (int sy = 0; sy < DISP_H; ++sy) {
     for (int sx = 0; sx < DISP_W; ++sx) {
@@ -126,7 +121,11 @@ bool ShowRGB_Animated(const uint8_t* rgb, size_t n, unsigned long display_ms) {
     }
   }
   
-  s_until_ms = millis() + display_ms;
+  if (display_ms == ULONG_MAX) {
+    s_until_ms = 0; // 無期限
+  } else {
+    s_until_ms = millis() + display_ms;
+  }
   return true;
 }
 
@@ -186,6 +185,7 @@ static bool s_scrollLoop = true;
 
 void TextScroll_Start(const char* text, uint16_t frame_delay_ms, bool loop) {
   TextScroll_Stop(); // ★追加: 既存のスクロールがあれば停止してリセット
+  s_until_ms = 0;    // ★追加: 期限切れチェックで消されないようにクリア
   if (!text) return;
   s_scrollText = String(text);
   s_scrollDelay = frame_delay_ms;
@@ -246,4 +246,4 @@ unsigned long TextEstimateDurationMs(const char* text, uint16_t frame_delay_ms) 
   return (unsigned long)steps * (unsigned long)frame_delay_ms;
 }
 
-}
+} // namespace DisplayManager

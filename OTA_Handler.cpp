@@ -60,7 +60,7 @@ void startDebugMode() {
   WiFi.disconnect(true);
   delay(100);
 
-  DisplayManager::AllOnRed(20); // 赤色: WiFi接続中
+  DisplayManager::AllOn(0, 255, 0); // 赤色: WiFi接続中
 
   // WiFi接続
   WiFi.mode(WIFI_STA);
@@ -68,7 +68,7 @@ void startDebugMode() {
 
   Serial.println("[DEBUG] Connecting to WiFi...");
   int retry = 0;
-  while (WiFi.status() != WL_CONNECTED && retry < 200) {
+  while (WiFi.status() != WL_CONNECTED && retry < 1000) {
     delay(50);
     retry++;
     if (retry % 20 == 0) Serial.print(".");
@@ -76,6 +76,8 @@ void startDebugMode() {
   Serial.println();
 
   if (WiFi.status() == WL_CONNECTED) {
+
+    DisplayManager::AllOn(255, 0, 0); // 緑色: 接続成功
     // Telnetサーバー開始
     telnetServer.begin();
     telnetServer.setNoDelay(true);
@@ -92,14 +94,14 @@ void startDebugMode() {
     Serial.println("Telnet: nc <IP> 23");
     Serial.println("OTA: Arduino IDE or PlatformIO");
 
-    DisplayManager::AllOnGreen(20); // 緑色: 接続成功
+  
   } else {
     Serial.println("⚠️ WiFi connection failed");
     DisplayManager::Clear();
     s_debugMode = false;
     s_otaReady = false;
     // 接続失敗時は再起動して通常モードへ
-    ESP.restart();
+    
   }
 }
 
@@ -185,7 +187,7 @@ void handleDebugMode() {
 
 // ========== 従来のOTA関数（互換性のため） ==========
 void setupOTA() {
-  DisplayManager::AllOnRed(20);
+  DisplayManager::AllOn(255, 0, 0);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -207,7 +209,7 @@ void setupOTA() {
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
-    DisplayManager::AllOnGreen(20);
+    DisplayManager::AllOn(0, 255, 0);
   } else {
     Serial.println("⚠️ WiFi failed, OTA aborted.");
     s_otaReady = false;

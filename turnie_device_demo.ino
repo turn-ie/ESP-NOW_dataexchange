@@ -2,6 +2,7 @@
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include <esp_wifi_types.h>
+#include <climits>
 
 #include <LittleFS.h>
 #include <FS.h>
@@ -18,7 +19,7 @@
 
 /***** LED MATRIX 設定 *****/
 int GLOBAL_BRIGHTNESS = 20;
-uint16_t TEXT_FRAME_DELAY_MS = 60;
+uint16_t TEXT_FRAME_DELAY_MS = 70;
 
 /***** ボタン設定 *****/
 #ifndef BUTTON_PIN
@@ -32,22 +33,27 @@ static bool DisplayMode = false;
 /***** 受信制御 *****/
 String lastRxData = "";
 unsigned long lastRxTime = 0;
-const unsigned long IGNORE_MS = 10000;
-const unsigned long RECEIVE_DISPLAY_HOLD_MS = 1600;
+const unsigned long IGNORE_MS = 4000;
+const unsigned long RECEIVE_DISPLAY_HOLD_MS = 5000;
 const unsigned long RECEIVE_DISPLAY_GUARD_MS = 4500;
 
 /***** 無線設定 *****/
 static const int WIFI_CH = 6;
 static const char* JSON_PATH = "/data.json";
-static int RSSI_THRESHOLD_DBM = -45;
+static int RSSI_THRESHOLD_DBM = -75;
 
 /***** ランタイム状態 *****/
 String myJson;
+static size_t currentInboxIndex = 0;  // ★追加: 現在表示中のインデックス
 
 /***** 受信コールバック *****/
 static void OnMessageReceived(const uint8_t* data, size_t len) {
   String incoming((const char*)data, len);
 
+    // 直近のデータと同じなら無視（デバウンス）
+  if (incoming.equals(lastRxData) && (millis() - lastRxTime < IGNORE_MS)) {
+    return;
+  }
 
   lastRxData = incoming;
   lastRxTime = millis();
@@ -99,11 +105,22 @@ void setup() {
     if (DisplayMode) {
       size_t n = inboxSize();
       if (n > 0) {
+        // currentInboxIndex = (currentInboxIndex + 1) % n;
+        currentInboxIndex = 0; // ★変更: 古い順（最初から）
+        
         InboxItem item;
-        if (inboxGet(n - 1, item)) {
+        if (inboxGet(currentInboxIndex, item)) {
+          debugPrintln("[DEBUG] Inbox item found. Loading JSON...");
           if (loadDisplayFromJsonString(item.json)) {
-            performDisplay(false, 3000, false);
+            debugPrintf("[INBOX] 表示中: %d / %d\n", currentInboxIndex + 1, n);
+            debugPrintln("[DEBUG] Calling performDisplay(true, ULONG_MAX, true)...");
+            bool res = performDisplay(true, ULONG_MAX, true);  // アニメON, 無期限, ループON
+            debugPrintf("[DEBUG] performDisplay result: %s\n", res ? "TRUE" : "FALSE");
+          } else {
+            debugPrintln("[ERROR] loadDisplayFromJsonString failed!");
           }
+        } else {
+          debugPrintln("[ERROR] inboxGet failed!");
         }
       } else {
         debugPrintln("[INBOX] データなし");
@@ -117,20 +134,25 @@ void setup() {
     }
   });
 
-  // シングルクリック: 2番目のデータ表示
+  // シングルクリック: 次のデータを表示（ループ）
   g_btn.attachClick([]() {
     if (!DisplayMode) return;
 
     size_t n = inboxSize();
-    if (n >= 2) {
-      InboxItem item;
-      if (inboxGet(n - 2, item)) {
-        if (loadDisplayFromJsonString(item.json)) {
-          performDisplay(false, 3000, false);
-        }
+    if (n == 0) {
+      debugPrintln("[INBOX] データなし");
+      return;
+    }
+
+    // 次のインデックスへ（最後まで行ったら最初に戻る）
+    currentInboxIndex = (currentInboxIndex + 1) % n;
+
+    InboxItem item;
+    if (inboxGet(currentInboxIndex, item)) {
+      if (loadDisplayFromJsonString(item.json)) {
+        debugPrintf("[INBOX] 表示中: %d / %d\n", currentInboxIndex + 1, n);
+        performDisplay(true, ULONG_MAX, true);  // アニメON, 無期限, ループON
       }
-    } else {
-      debugPrintln("[INBOX] 2番目のデータなし");
     }
   });
 
@@ -203,6 +225,15 @@ void loop() {
 
   if (DisplayManager::TextScroll_IsActive()) {
     DisplayManager::TextScroll_Update();
+    
+    // ★追加: スクロールが終わった瞬間に自分の表示に戻す
+    if (!DisplayManager::TextScroll_IsActive()) {
+      if (!DisplayMode && !myJson.isEmpty()) {
+        loadDisplayFromJsonString(myJson);
+        performDisplay();
+        debugPrintln("[INFO] Text scroll finished, reverting to myJson");
+      }
+    }
   }
   delay(16);
 
